@@ -5,6 +5,8 @@ import { useAuth } from '../AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
+
+
 const SignUp = () => {
   const navigate = useNavigate();
   const location = useLocation();

@@ -12,20 +12,18 @@ const pool = new Pool({
 });
 
 // Test the database connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Error connecting to the database:', err.stack);
-    return;
-  }
-  console.log('Successfully connected to database');
-  // Test query to verify connection
-  client.query('SELECT NOW()', (err, result) => {
-    release();
-    if (err) {
-      return console.error('Error executing query', err.stack);
-    }
+const testConnection = async () => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    console.log('Successfully connected to database');
     console.log('Database connection test successful:', result.rows[0]);
-  });
-});
+    client.release();
+  } catch (err) {
+    console.error('Error connecting to the database:', err.stack);
+  }
+};
+
+testConnection();
 
 module.exports = pool;

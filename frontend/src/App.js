@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import { AuthProvider } from './AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import AdminRoute from './AdminRoute';
@@ -17,6 +17,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
 import config from './config';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Configure axios defaults
 axios.defaults.baseURL = config.API_URL;
@@ -93,66 +94,52 @@ function HomePage() {
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID}>
-      <AuthProvider>
-        <Router>
-          <div className="App">
-            <nav className="navbar">
-              <div className="nav-left">
-                <Link to="/" className="nav-link">Home</Link>
-                <Link to="/subscription" className="nav-link">Subscribe</Link>
-                <Link to="/about" className="nav-link">About Us</Link>
-              </div>
-              <div className="nav-right">
-                <Link to="/signin" className="nav-link sign-in-btn">Sign In</Link>
-                <Link to="/signup" className="nav-link sign-up-btn">Sign Up</Link>
-              </div>
-            </nav>
-            
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/signin" element={<SignIn />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/subscription" element={<Subscription />} />
-              <Route 
-                path="/payment" 
-                element={
-                  <Elements stripe={stripePromise} options={options}>
-                    <Payment />
-                  </Elements>
-                } 
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <UpdateProfile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <AdminDashboard />
-                  </AdminRoute>
-                }
-              />
-            </Routes>
-          </div>
-        </Router>
-      </AuthProvider>
-    </GoogleOAuthProvider>
+    <ErrorBoundary>
+      <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID}>
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-gray-100">
+              <nav className="navbar">
+                <div className="nav-left">
+                  <Link to="/" className="nav-link">Home</Link>
+                  <Link to="/subscription" className="nav-link">Subscribe</Link>
+                  <Link to="/about" className="nav-link">About Us</Link>
+                </div>
+                <div className="nav-right">
+                  <Link to="/signin" className="nav-link sign-in-btn">Sign In</Link>
+                  <Link to="/signup" className="nav-link sign-up-btn">Sign Up</Link>
+                </div>
+              </nav>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<UpdateProfile />} />
+                  <Route path="/subscription" element={<Subscription />} />
+                  <Route 
+                    path="/payment" 
+                    element={
+                      <Elements stripe={stripePromise} options={options}>
+                        <Payment />
+                      </Elements>
+                    } 
+                  />
+                </Route>
+
+                <Route element={<AdminRoute />}>
+                  <Route path="/admin" element={<AdminDashboard />} />
+                </Route>
+              </Routes>
+            </div>
+          </Router>
+        </AuthProvider>
+      </GoogleOAuthProvider>
+    </ErrorBoundary>
   );
 }
 

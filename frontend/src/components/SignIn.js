@@ -1,5 +1,5 @@
 // SignIn.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
@@ -17,6 +17,32 @@ const SignIn = () => {
     password: ''
   });
 
+  const handleGoogleSignIn = useCallback(async ({ credential }) => {
+    try {
+      const response = await axios.post('/api/users/google-signin', { credential });
+      
+      if (response.data.user) {
+        setAuthData({
+          token: response.data.token,
+          user: response.data.user
+        });
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      if (error.response?.data?.shouldSignUp) {
+        // Redirect to signup with Google credentials
+        navigate('/signup', { 
+          state: { 
+            credential,
+            message: error.response.data.message 
+          }
+        });
+      } else {
+        setError(error.response?.data?.message || 'Google sign-in failed');
+      }
+    }
+  }, [setAuthData, navigate]);
+
   useEffect(() => {
     // If redirected from signup with Google credentials, attempt sign-in
     const credential = location.state?.credential;
@@ -27,6 +53,7 @@ const SignIn = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(''); // Clear error when user starts typing
   };
 
   const handleEmailSignIn = async (e) => {
@@ -35,7 +62,7 @@ const SignIn = () => {
     setError('');
 
     try {
-      const response = await axios.post('/users/signin', formData);
+      const response = await axios.post('/api/users/signin', formData);
 
       setAuthData({
         token: response.data.token,
@@ -50,55 +77,21 @@ const SignIn = () => {
     }
   };
 
-  const handleGoogleSignIn = async (credentialResponse) => {
-    setLoading(true);
-    setError('');
-    setMessage('');
-
-    try {
-      const response = await axios.post('/users/google-signin', {
-        credential: credentialResponse.credential
-      });
-
-      setAuthData({
-        token: response.data.token,
-        user: response.data.user
-      });
-
-      navigate('/dashboard');
-    } catch (err) {
-      if (err.response?.status === 404) {
-        // User doesn't exist, redirect to signup
-        navigate('/signup', { 
-          state: { 
-            message: "Account not found. Please sign up first.",
-            credential: credentialResponse.credential 
-          }
-        });
-      } else {
-        setError(err.response?.data?.message || 'Failed to sign in with Google');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Sign in to your account
         </h2>
+        {message && (
+          <div className="mt-2 text-center text-sm text-green-600">
+            {message}
+          </div>
+        )}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {message && (
-            <div className="mb-4 text-sm text-blue-600 text-center">
-              {message}
-            </div>
-          )}
-          
           <form className="space-y-6" onSubmit={handleEmailSignIn}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -113,25 +106,15 @@ const SignIn = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="text-sm">
-                  <Link 
-                    to="/forgot-password"
-                    className="font-medium text-blue-600 hover:text-blue-500"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
-              </div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
               <div className="mt-1">
                 <input
                   id="password"
@@ -141,24 +124,22 @@ const SignIn = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <div className="text-sm">
+                <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+                  Forgot your password?
+                </Link>
+              </div>
+            </div>
+
             {error && (
-              <div className="text-red-500 text-sm text-center">
+              <div className="text-sm text-red-600">
                 {error}
-                {error.includes('Invalid email or password') && (
-                  <div className="mt-1">
-                    <Link 
-                      to="/forgot-password"
-                      className="text-blue-600 hover:text-blue-500"
-                    >
-                      Forgot your password?
-                    </Link>
-                  </div>
-                )}
               </div>
             )}
 
@@ -166,7 +147,7 @@ const SignIn = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
@@ -184,16 +165,25 @@ const SignIn = () => {
             </div>
 
             <div className="mt-6">
-              <div className="flex justify-center">
+              <div className="mt-1 grid grid-cols-1 gap-3">
                 <GoogleLogin
                   onSuccess={handleGoogleSignIn}
                   onError={() => setError('Google sign-in failed')}
-                  text="signin_with"
-                  shape="rectangular"
-                  theme="filled_blue"
-                  useOneTap={false}
-                  flow="auth-code"
+                  useOneTap
                 />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">
+                  Don't have an account?{' '}
+                  <Link to="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+                    Sign up
+                  </Link>
+                </span>
               </div>
             </div>
           </div>
