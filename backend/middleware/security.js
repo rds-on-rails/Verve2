@@ -40,6 +40,21 @@ const validateResetPassword = [
   validator.body('newPassword').isLength({ min: 6 }),
 ];
 
+const securityHeaders = helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "'unsafe-eval'",
+        "https://js.stripe.com",
+        "https://accounts.google.com/gsi/client"
+      ],
+    },
+  },
+});
+
 module.exports = {
   authLimiter,
   generalLimiter,
@@ -48,5 +63,5 @@ module.exports = {
   validateSignin,
   validateProfile,
   validateResetPassword,
-  helmet
+  securityHeaders
 };

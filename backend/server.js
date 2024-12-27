@@ -7,13 +7,15 @@ require('dotenv').config();
 const {
   helmet,
   generalLimiter,
-  csrfProtection
+  csrfProtection,
+  securityHeaders
 } = require('./middleware/security');
 
 const app = express();
 
 // Security middleware
-app.use(helmet());
+//app.use(helmet());
+app.use(securityHeaders);
 app.use(cookieParser());
 app.use(express.json());
 app.use(cors({

@@ -5,18 +5,7 @@ import { useAuth } from '../AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
-const SignIn = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { setAuthData } = useAuth();
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState(location.state?.message || '');
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-
+const GoogleSignIn = ({ setError, setAuthData, navigate }) => {
   const handleGoogleSignIn = useCallback(async ({ credential }) => {
     try {
       const response = await axios.post('/api/users/google-signin', { credential });
@@ -29,31 +18,71 @@ const SignIn = () => {
         navigate('/dashboard');
       }
     } catch (error) {
-      if (error.response?.data?.shouldSignUp) {
-        // Redirect to signup with Google credentials
-        navigate('/signup', { 
-          state: { 
-            credential,
-            message: error.response.data.message 
-          }
-        });
-      } else {
-        setError(error.response?.data?.message || 'Google sign-in failed');
-      }
+      setError(error.response?.data?.message || 'Google sign-in failed');
     }
   }, [setAuthData, navigate]);
+
+  return (
+    <div className="mt-6">
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">Or continue with</span>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <div className="mt-1 grid grid-cols-1 gap-3">
+          <GoogleLogin
+            onSuccess={handleGoogleSignIn}
+            onError={() => setError('Google sign-in failed')}
+            useOneTap
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SignIn = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { setAuthData } = useAuth();
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState(location.state?.message || '');
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
 
   useEffect(() => {
     // If redirected from signup with Google credentials, attempt sign-in
     const credential = location.state?.credential;
     if (credential) {
+      const handleGoogleSignIn = async ({ credential }) => {
+        try {
+          const response = await axios.post('/api/users/google-signin', { credential });
+          
+          if (response.data.user) {
+            setAuthData({
+              token: response.data.token,
+              user: response.data.user
+            });
+            navigate('/dashboard');
+          }
+        } catch (error) {
+          setError(error.response?.data?.message || 'Google sign-in failed');
+        }
+      };
       handleGoogleSignIn({ credential });
     }
-  }, [location.state?.credential, handleGoogleSignIn]);
+  }, [location.state?.credential, setAuthData, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(''); // Clear error when user starts typing
   };
 
   const handleEmailSignIn = async (e) => {
@@ -154,26 +183,7 @@ const SignIn = () => {
             </div>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <div className="mt-1 grid grid-cols-1 gap-3">
-                <GoogleLogin
-                  onSuccess={handleGoogleSignIn}
-                  onError={() => setError('Google sign-in failed')}
-                  useOneTap
-                />
-              </div>
-            </div>
-          </div>
+          <GoogleSignIn setError={setError} setAuthData={setAuthData} navigate={navigate} />
 
           <div className="mt-6">
             <div className="relative">
